@@ -1,0 +1,87 @@
+type Resort {
+  id: ID!
+  name: String
+  description: String
+  address: Address
+  phone: String
+  rating: Float
+  reviews: [Review]
+  reviewsCount: Int
+  dateCreated: String
+  accommodations: [Accommodation]
+  amenities: [String]
+  location: Location
+  nearbyAttractions: [NearbyAttraction]
+  rules: [String]
+  cancellationPolicy: String
+  faqs: [FAQ]
+  localActivities: [LocalActivity]
+  events: [Event]
+  images: [String]
+  price: Float
+  accommodationsCount: Int
+  amenitiesCount: Int
+  nearbyAttractionsCount: Int
+  faqsCount: Int
+  localActivitiesCount: Int
+  eventsCount: Int
+  imagesCount: Int
+}
+
+type Address {
+  street: String
+  city: String
+  state: String
+  zip: String
+}
+
+type Review {
+  rating: Float
+  review: String
+  reviewBy: String
+  dateCreated: String
+}
+
+type Accommodation {
+  name: String
+  description: String
+}
+
+type Location {
+  lat: Float
+  long: Float
+}
+
+type NearbyAttraction {
+  name: String
+  description: String
+  address: String
+  image: String
+}
+
+type FAQ {
+  question: String
+  answer: String
+}
+
+type LocalActivity {
+  name: String
+  description: String
+  image: String
+}
+
+type Event {
+  id: ID!
+  name: String
+  description: String
+  images: [String]
+  resortId: ID
+  dateCreated: String
+  dateStart: String
+  dateEnd: String
+}
+
+type Query {
+  resorts: [Resort]
+  resort(id: ID!): Resort
+}
