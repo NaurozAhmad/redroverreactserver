@@ -81,10 +81,20 @@ app.use(
       let token = req.headers.authorization;
       let user = null;
       if (token) {
-        token = token.split(' ')[1];
-        const data: any = jwt.verify(token, 'secret');
-        user = await User.findOne({ email: data.data });
-        console.log('got user in gql context', user);
+        try {
+          token = token.split(' ')[1];
+          const data: any = jwt.verify(token, process.env.SECRET || 'secret');
+          user = await User.findOne({ email: data.data });
+          console.log('got user in gql context', user);
+        } catch (err) {
+          console.log('error verifying token', err);
+          throw new GraphQLError('Token expired', {
+            extensions: {
+              code: 'TOKEN_EXPIRED',
+              status: 401,
+            },
+          });
+        }
       }
       return { db, token: req.headers.authorization, user };
     },
@@ -97,7 +107,7 @@ passport.use(
   new JwtStrategy(
     {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: 'secret',
+      secretOrKey: process.env.SECRET || 'secret',
     },
     async function (jwtPayload, done) {
       try {
