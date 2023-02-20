@@ -19,8 +19,7 @@ import User from './models/user.js';
 import auth from './auth.js';
 import { GraphQLError } from 'graphql';
 
-const dbString =
-  'mongodb+srv://redroveruser:oF4ejqLD7IOrn9s9@cluster0.e62xs.mongodb.net/redrover?retryWrites=true&w=majority';
+const dbString = process.env.MONGO_URI;
 mongoose.set('strictQuery', true);
 const db = await mongoose.connect(dbString);
 
