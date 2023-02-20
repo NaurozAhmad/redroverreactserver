@@ -1,21 +1,33 @@
 import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
+import { expressMiddleware } from '@apollo/server/express4';
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import express from 'express';
+import http from 'http';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+
 import mongoose from 'mongoose';
 import { readFileSync } from 'fs';
 
-import { Strategy } from 'passport-local';
 import passport from 'passport';
-import crypto from 'crypto';
+import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
+import jwt from 'jsonwebtoken';
 
 import Resort from './models/resort.js';
 import User from './models/user.js';
 
+import auth from './auth.js';
+import { GraphQLError } from 'graphql';
+
 const dbString =
   'mongodb+srv://redroveruser:oF4ejqLD7IOrn9s9@cluster0.e62xs.mongodb.net/redrover?retryWrites=true&w=majority';
-
 mongoose.set('strictQuery', true);
+const db = await mongoose.connect(dbString);
 
-const typeDefs = readFileSync('./src/schema.graphql', 'utf8');
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+const httpServer = http.createServer(app);
 
 const populateResortCounts = (resort) => {
   resort.reviewsCount = resort.reviews.length;
@@ -39,6 +51,15 @@ const resolver = {
       });
     },
     resort(_, { id }, _context, _info) {
+      if (!_context.user) {
+        console.log('context has no user');
+        throw new GraphQLError('User is not logged in', {
+          extensions: {
+            code: 'UNAUTHENTICATED',
+            status: 401,
+          },
+        });
+      }
       return Resort.findOne({ _id: id }).then((resort) => {
         return populateResortCounts(resort);
       });
@@ -47,42 +68,49 @@ const resolver = {
 };
 
 const server = new ApolloServer({
-  typeDefs,
+  typeDefs: readFileSync('./src/schema.graphql', 'utf8'),
   resolvers: resolver,
+  plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
 });
+await server.start();
 
-const setPassport = () => {
-  passport.use(
-    new Strategy(async function verify(username, password, cb) {
-      const user = await User.findOne({ username: username });
-
-      if (!user) {
-        return cb(null, false, { message: 'Incorrect username or password.' });
+app.use(
+  '/gql',
+  expressMiddleware(server, {
+    context: async ({ req }) => {
+      let token = req.headers.authorization;
+      let user = null;
+      if (token) {
+        token = token.split(' ')[1];
+        const data: any = jwt.verify(token, 'secret');
+        user = await User.findOne({ email: data.data });
+        console.log('got user in gql context', user);
       }
+      return { db, token: req.headers.authorization, user };
+    },
+  })
+);
 
-      if (user.password !== password) {
-        return cb(null, false, { message: 'Incorrect username or password.' });
+app.use(auth);
+
+passport.use(
+  new JwtStrategy(
+    {
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: 'secret',
+    },
+    async function (jwtPayload, done) {
+      try {
+        console.log('jwt payload', jwtPayload);
+        const user = await User.findOne({ email: jwtPayload.data });
+        return done(null, user || false);
+      } catch (err) {
+        return done(err, false);
       }
+    }
+  )
+);
 
-      crypto.pbkdf2(password, user.salt, 310000, 32, 'sha256', function (err, hashedPassword) {
-        if (err) {
-          return cb(err);
-        }
-        if (!crypto.timingSafeEqual(user.password as any, hashedPassword)) {
-          return cb(null, false, { message: 'Incorrect username or password.' });
-        }
-        return cb(null, user);
-      });
-    })
-  );
-};
+await new Promise<void>((resolve) => httpServer.listen({ port: 4000 }, resolve));
 
-const { url } = await startStandaloneServer(server, {
-  context: async ({ req }) => {
-    setPassport();
-    const db = await mongoose.connect(dbString);
-    return { db };
-  },
-});
-
-console.log(`🚀 Server ready at ${url}`);
+console.log(`🚀 Server ready at http://localhhost:4000`);

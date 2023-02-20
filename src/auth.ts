@@ -1,13 +1,20 @@
 import { Router } from 'express';
 import passport from 'passport';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 
-import User from './models/user';
+import User from './models/user.js';
 
 const route = Router();
 
 route.post('/signup', async (req, res, next) => {
+  console.log('Signing up...');
   const salt = crypto.randomBytes(16).toString('hex');
+
+  const user = await User.findOne({ email: req.body.email });
+  if (user) {
+    return res.status(400).send({ message: 'User already exists' });
+  }
 
   crypto.pbkdf2(req.body.password, salt, 310000, 32, 'sha256', async function (err, hashedPassword) {
     if (err) {
@@ -15,28 +22,21 @@ route.post('/signup', async (req, res, next) => {
     }
 
     const user = await User.create({
-      username: req.body.username,
+      email: req.body.email,
       password: hashedPassword,
       salt: salt,
-      email: req.body.email,
       firstName: req.body.firstName,
       lastName: req.body.lastName,
     });
 
-    req.login(user, function (err) {
-      if (err) {
-        return next(err);
-      }
-      res.redirect('/');
-    });
-  });
+    const token = jwt.sign({ data: req.body.email }, 'secret', { expiresIn: 60 * 60 });
 
-  const { username, password } = req.body;
-  const user = new User({ username: username, password: password });
-  await user.save();
-  res.status(200).send();
+    return res.status(200).send({ token });
+  });
 });
 
-route.post('/login', passport.authenticate('local', { successRedirect: '/', failureRedirect: '/login' }));
+route.post('/login', passport.authenticate('jwt', { session: false }), (req, res) => {
+  res.send('Logged in');
+});
 
 export default route;
