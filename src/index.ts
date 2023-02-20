@@ -51,15 +51,15 @@ const resolver = {
       });
     },
     resort(_, { id }, _context, _info) {
-      if (!_context.user) {
-        console.log('context has no user');
-        throw new GraphQLError('User is not logged in', {
-          extensions: {
-            code: 'UNAUTHENTICATED',
-            status: 401,
-          },
-        });
-      }
+      // if (!_context.user) {
+      //   console.log('context has no user');
+      //   throw new GraphQLError('User is not logged in', {
+      //     extensions: {
+      //       code: 'UNAUTHENTICATED',
+      //       status: 401,
+      //     },
+      //   });
+      // }
       return Resort.findOne({ _id: id }).then((resort) => {
         return populateResortCounts(resort);
       });

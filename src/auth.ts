@@ -31,12 +31,29 @@ route.post('/signup', async (req, res, next) => {
 
     const token = jwt.sign({ data: req.body.email }, 'secret', { expiresIn: 60 * 60 });
 
-    return res.status(200).send({ token });
+    return res.status(200).send({ token, user: { email: user.email, firstName: user.firstName, lastName: user.lastName } });
   });
 });
 
-route.post('/login', passport.authenticate('jwt', { session: false }), (req, res) => {
-  res.send('Logged in');
+route.post('/login', async (req, res) => {
+  console.log('Logging in...', req.body);
+  const user = await User.findOne({ email: req.body.email });
+
+  if (!user) {
+    return res.status(401).send({ message: 'Incorrect email or password' });
+  }
+
+  crypto.pbkdf2(req.body.password, user.salt, 310000, 32, 'sha256', function (err, hashedPassword) {
+    if (err) {
+      return res.status(400).send({ message: 'Error logging in' });
+    }
+    if (!crypto.timingSafeEqual(user.password as any, hashedPassword)) {
+      return res.status(401).send({ message: 'Incorrect email or password' });
+    }
+    const token = jwt.sign({ data: req.body.email }, 'secret', { expiresIn: 60 * 60 });
+
+    return res.status(200).send({ token, user: { email: user.email, firstName: user.firstName, lastName: user.lastName }});
+  });
 });
 
 export default route;
