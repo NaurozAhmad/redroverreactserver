@@ -5,9 +5,11 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "compile": "npx tsc",
-    "start": "npm run compile && node ./dist/index.js",
-    "dev": "nodemon --exec ts-node --esm ./src/index.ts"
+    "rsync:graphql": "rsync -r --include '*/ ' --include '*.graphql' --exclude '*' --prune-empty-dirs ./src/ ./dist/src",
+    "compile": "npx tsc && npm run rsync:graphql",
+    "start": "npm run compile && node ./dist/src/index.js",
+    "dev": "nodemon --exec ts-node --esm ./src/index.ts",
+    "build": "npm run compile"
   },
   "keywords": [],
   "author": "",

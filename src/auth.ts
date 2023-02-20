@@ -29,7 +29,7 @@ route.post('/signup', async (req, res, next) => {
       lastName: req.body.lastName,
     });
 
-    const token = jwt.sign({ data: req.body.email }, process.env.SECRET || 'secret', { expiresIn: 6 });
+    const token = jwt.sign({ data: req.body.email }, process.env.SECRET || 'secret', { expiresIn: 60*60*24 });
 
     return res.status(200).send({ token, user: { email: user.email, firstName: user.firstName, lastName: user.lastName } });
   });
@@ -50,7 +50,7 @@ route.post('/login', async (req, res) => {
     if (!crypto.timingSafeEqual(user.password as any, hashedPassword)) {
       return res.status(401).send({ message: 'Incorrect email or password' });
     }
-    const token = jwt.sign({ data: req.body.email }, process.env.SECRET || 'secret', { expiresIn: 6 });
+    const token = jwt.sign({ data: req.body.email }, process.env.SECRET || 'secret', { expiresIn: 60*60*24 });
 
     return res.status(200).send({ token, user: { email: user.email, firstName: user.firstName, lastName: user.lastName }});
   });

@@ -4,12 +4,7 @@ export interface IResort {
   description: string;
   location: ILocation;
   phone: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zip: string;
-  };
+  address: IAddress;
   rating: number;
   reviews: IReview[];
   reviewsCount: number;
@@ -84,4 +79,11 @@ export interface IUser {
   email: string;
   firstName: string;
   lastName: string;
+}
+
+export interface IAddress {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
 }

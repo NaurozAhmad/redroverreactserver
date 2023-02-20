@@ -27,7 +27,6 @@ const db = await mongoose.connect(dbString);
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-const httpServer = http.createServer(app);
 
 const populateResortCounts = (resort) => {
   resort.reviewsCount = resort.reviews.length;
@@ -67,6 +66,9 @@ const resolver = {
   },
 };
 
+app.use(auth);
+const httpServer = http.createServer(app);
+
 const server = new ApolloServer({
   typeDefs: readFileSync('./src/schema.graphql', 'utf8'),
   resolvers: resolver,
@@ -100,8 +102,6 @@ app.use(
     },
   })
 );
-
-app.use(auth);
 
 passport.use(
   new JwtStrategy(
